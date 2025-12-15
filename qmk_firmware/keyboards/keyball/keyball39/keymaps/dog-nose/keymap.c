@@ -61,34 +61,36 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 // clang-format on
 
 layer_state_t layer_state_set_user(layer_state_t state) {
-    // Auto enable scroll mode when the highest layer is 3
-    // keyball_set_scroll_mode(get_highest_layer(state) == 3);
-    return state;
+  // Auto enable scroll mode when the highest layer is 3
+  // keyball_set_scroll_mode(get_highest_layer(state) == 3);
+  return state;
 }
 
 #ifdef OLED_ENABLE
 
-#    include "lib/oledkit/oledkit.h"
+#include "lib/oledkit/oledkit.h"
 
 void oledkit_render_info_user(void) {
-    keyball_oled_render_keyinfo();
-    keyball_oled_render_ballinfo();
-    keyball_oled_render_layerinfo();
+  keyball_oled_render_keyinfo();
+  keyball_oled_render_ballinfo();
+  keyball_oled_render_layerinfo();
 }
 #endif
 
-
 #ifdef COMBO_ENABLE
 enum combos {
-    JK_MB1,
-    KL_MB2,
+  JK_MB1,
+  KL_MB2,
+  JQ_ESC,
 };
 
 const uint16_t PROGMEM jk_mb1_combo[] = {KC_J, KC_K, COMBO_END};
 const uint16_t PROGMEM kl_mb2_combo[] = {KC_K, KC_L, COMBO_END};
+const uint16_t PROGMEM jq_esc_combo[] = {KC_J, KC_Q, COMBO_END};
 combo_t key_combos[] = {
     [JK_MB1] = COMBO(jk_mb1_combo, KC_BTN1),
     [KL_MB2] = COMBO(kl_mb2_combo, KC_BTN2),
+    [JQ_ESC] = COMBO(jq_esc_combo, KC_ESC),
 };
 
 #endif
