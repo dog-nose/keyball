@@ -81,16 +81,16 @@ void oledkit_render_info_user(void) {
 enum combos {
   JK_MB1,
   KL_MB2,
-  GJ_ESC,
+  HL_ESC,
 };
 
 const uint16_t PROGMEM jk_mb1_combo[] = {KC_J, KC_K, COMBO_END};
 const uint16_t PROGMEM kl_mb2_combo[] = {KC_K, KC_L, COMBO_END};
-const uint16_t PROGMEM gj_esc_combo[] = {KC_G, KC_J, COMBO_END};
+const uint16_t PROGMEM hl_esc_combo[] = {KC_H, KC_L, COMBO_END};
 combo_t key_combos[] = {
     [JK_MB1] = COMBO(jk_mb1_combo, KC_BTN1),
     [KL_MB2] = COMBO(kl_mb2_combo, KC_BTN2),
-    [GJ_ESC] = COMBO(gj_esc_combo, KC_ESC),
+    [HL_ESC] = COMBO(hl_esc_combo, KC_ESC),
 };
 
 #endif
