@@ -276,33 +276,6 @@ static inline bool should_report(void) {
     return true;
 }
 
-report_mouse_t pointing_device_driver_get_report(report_mouse_t rep) {
-    // fetch from optical sensor.
-    if (keyball.this_have_ball) {
-        pmw3360_motion_t d = {0};
-        if (pmw3360_motion_burst(&d)) {
-            ATOMIC_BLOCK_FORCEON {
-                keyball.this_motion.x = add16(keyball.this_motion.x, d.x);
-                keyball.this_motion.y = add16(keyball.this_motion.y, d.y);
-
-#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
-                // Custom Auto Mouse Layer check
-                keyball_auto_mouse_layer_check(d.x, d.y);
-#endif
-            }
-        }
-    }
-    // report mouse event, if keyboard is primary.
-    if (is_keyboard_master() && should_report()) {
-        // modify mouse report by PMW3360 motion.
-        motion_to_mouse(&keyball.this_motion, &rep, is_keyboard_left(), keyball.scroll_mode);
-        motion_to_mouse(&keyball.that_motion, &rep, !is_keyboard_left(), keyball.scroll_mode ^ keyball.this_have_ball);
-        // store mouse report for OLED.
-        keyball.last_mouse = rep;
-    }
-    return rep;
-}
-
 //////////////////////////////////////////////////////////////////////////////
 // Auto Mouse Layer - Motion-based implementation
 
@@ -384,6 +357,33 @@ static void add_auto_mouse_threshold(int8_t delta) {
 }
 
 #endif // POINTING_DEVICE_AUTO_MOUSE_ENABLE
+
+report_mouse_t pointing_device_driver_get_report(report_mouse_t rep) {
+    // fetch from optical sensor.
+    if (keyball.this_have_ball) {
+        pmw3360_motion_t d = {0};
+        if (pmw3360_motion_burst(&d)) {
+            ATOMIC_BLOCK_FORCEON {
+                keyball.this_motion.x = add16(keyball.this_motion.x, d.x);
+                keyball.this_motion.y = add16(keyball.this_motion.y, d.y);
+
+#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+                // Custom Auto Mouse Layer check
+                keyball_auto_mouse_layer_check(d.x, d.y);
+#endif
+            }
+        }
+    }
+    // report mouse event, if keyboard is primary.
+    if (is_keyboard_master() && should_report()) {
+        // modify mouse report by PMW3360 motion.
+        motion_to_mouse(&keyball.this_motion, &rep, is_keyboard_left(), keyball.scroll_mode);
+        motion_to_mouse(&keyball.that_motion, &rep, !is_keyboard_left(), keyball.scroll_mode ^ keyball.this_have_ball);
+        // store mouse report for OLED.
+        keyball.last_mouse = rep;
+    }
+    return rep;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 // Split RPC
