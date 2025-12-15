@@ -33,6 +33,11 @@ const uint16_t AML_TIMEOUT_MIN = 100;
 const uint16_t AML_TIMEOUT_MAX = 1000;
 const uint16_t AML_TIMEOUT_QU  = 50;   // Quantization Unit
 
+const uint8_t AML_THRESHOLD_MIN = 5;   // Sensor value 50
+const uint8_t AML_THRESHOLD_MAX = 50;  // Sensor value 500
+const uint8_t AML_THRESHOLD_DEFAULT = 13;  // Sensor value 130 (approx 25 pixels @ 500 CPI)
+const uint16_t AML_MOTION_TIMEOUT = 500;  // Motion accumulation timeout (ms)
+
 static const char BL = '\xB0'; // Blank indicator character
 static const char LFSTR_ON[] PROGMEM = "\xB2\xB3";
 static const char LFSTR_OFF[] PROGMEM = "\xB4\xB5";
@@ -50,6 +55,13 @@ keyball_t keyball = {
 
     .scroll_mode = false,
     .scroll_div  = 0,
+
+#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+    .aml_motion_distance_sq = 0,
+    .aml_last_motion_time = 0,
+    .aml_threshold = AML_THRESHOLD_DEFAULT,
+    .aml_active = false,
+#endif
 
     .pressing_keys = { BL, BL, BL, BL, BL, BL, 0 },
 };
@@ -272,6 +284,11 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t rep) {
             ATOMIC_BLOCK_FORCEON {
                 keyball.this_motion.x = add16(keyball.this_motion.x, d.x);
                 keyball.this_motion.y = add16(keyball.this_motion.y, d.y);
+
+#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+                // Custom Auto Mouse Layer check
+                keyball_auto_mouse_layer_check(d.x, d.y);
+#endif
             }
         }
     }
@@ -285,6 +302,88 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t rep) {
     }
     return rep;
 }
+
+//////////////////////////////////////////////////////////////////////////////
+// Auto Mouse Layer - Motion-based implementation
+
+#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+
+// Auto Mouse Layer: Motion accumulation and threshold check
+static void keyball_auto_mouse_layer_check(int16_t dx, int16_t dy) {
+    if (!get_auto_mouse_enable()) {
+        return;
+    }
+
+    uint32_t now = timer_read32();
+
+    // Timeout check: Reset if last motion was too long ago
+    if (keyball.aml_last_motion_time > 0 &&
+        TIMER_DIFF_32(now, keyball.aml_last_motion_time) > AML_MOTION_TIMEOUT) {
+        keyball.aml_motion_distance_sq = 0;
+    }
+
+    // Accumulate motion only if there is movement
+    if (dx != 0 || dy != 0) {
+        keyball.aml_last_motion_time = now;
+
+        // Calculate accumulated distance squared (overflow protection)
+        uint32_t new_distance_sq = (uint32_t)((int32_t)dx * dx + (int32_t)dy * dy);
+        if (keyball.aml_motion_distance_sq < UINT32_MAX - new_distance_sq) {
+            keyball.aml_motion_distance_sq += new_distance_sq;
+        }
+
+        // Threshold check
+        uint32_t threshold_sq = (uint32_t)keyball.aml_threshold * 10;
+        threshold_sq = threshold_sq * threshold_sq;
+
+        if (keyball.aml_motion_distance_sq >= threshold_sq && !keyball.aml_active) {
+            // Threshold exceeded → Enable Auto Mouse Layer
+            layer_on(AUTO_MOUSE_DEFAULT_LAYER);
+            keyball.aml_active = true;
+        }
+    }
+}
+
+// Auto Mouse Layer: Deactivation (timeout handling)
+static void keyball_auto_mouse_layer_timeout_check(void) {
+    if (!get_auto_mouse_enable() || !keyball.aml_active) {
+        return;
+    }
+
+    uint32_t now = timer_read32();
+    uint16_t timeout = get_auto_mouse_timeout();
+
+    // Turn off layer if enough time has passed since last motion
+    if (TIMER_DIFF_32(now, keyball.aml_last_motion_time) > timeout) {
+        layer_off(AUTO_MOUSE_DEFAULT_LAYER);
+        keyball.aml_active = false;
+        keyball.aml_motion_distance_sq = 0;
+    }
+}
+
+// Get threshold
+uint8_t keyball_get_auto_mouse_threshold(void) {
+    return keyball.aml_threshold == 0 ? AML_THRESHOLD_DEFAULT : keyball.aml_threshold;
+}
+
+// Set threshold
+void keyball_set_auto_mouse_threshold(uint8_t threshold) {
+    if (threshold > AML_THRESHOLD_MAX) {
+        threshold = AML_THRESHOLD_MAX;
+    }
+    if (threshold < AML_THRESHOLD_MIN) {
+        threshold = AML_THRESHOLD_MIN;
+    }
+    keyball.aml_threshold = threshold;
+}
+
+// Adjust threshold
+static void add_auto_mouse_threshold(int8_t delta) {
+    int16_t v = keyball_get_auto_mouse_threshold() + delta;
+    keyball_set_auto_mouse_threshold(v < AML_THRESHOLD_MIN ? AML_THRESHOLD_MIN : v);
+}
+
+#endif // POINTING_DEVICE_AUTO_MOUSE_ENABLE
 
 //////////////////////////////////////////////////////////////////////////////
 // Split RPC
@@ -583,6 +682,7 @@ void keyboard_post_init_kb(void) {
 #ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
         set_auto_mouse_enable(c.amle);
         set_auto_mouse_timeout(c.amlto == 0 ? AUTO_MOUSE_TIME : (c.amlto + 1) * AML_TIMEOUT_QU);
+        keyball_set_auto_mouse_threshold(c.amlth);
 #endif
 #if KEYBALL_SCROLLSNAP_ENABLE == 2
         keyball_set_scrollsnap_mode(c.ssnap);
@@ -601,6 +701,9 @@ void housekeeping_task_kb(void) {
             rpc_get_motion_invoke();
             rpc_set_cpi_invoke();
         }
+#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+        keyball_auto_mouse_layer_timeout_check();
+#endif
     }
 }
 #endif
@@ -642,6 +745,14 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
 
     pressing_keys_update(keycode, record);
 
+#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+    // Reset motion accumulation on key press (except auto mouse config keys)
+    if (record->event.pressed && keycode != AML_TO && keycode != AML_I50 &&
+        keycode != AML_D50 && keycode != AML_I_TH && keycode != AML_D_TH) {
+        keyball.aml_motion_distance_sq = 0;
+    }
+#endif
+
     if (!process_record_user(keycode, record)) {
         return false;
     }
@@ -679,6 +790,9 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
 #ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
                 set_auto_mouse_enable(false);
                 set_auto_mouse_timeout(AUTO_MOUSE_TIME);
+                keyball_set_auto_mouse_threshold(0);
+                keyball.aml_motion_distance_sq = 0;
+                keyball.aml_active = false;
 #endif
                 break;
             case KBC_SAVE: {
@@ -688,6 +802,7 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
 #ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
                     .amle  = get_auto_mouse_enable(),
                     .amlto = (get_auto_mouse_timeout() / AML_TIMEOUT_QU) - 1,
+                    .amlth = keyball.aml_threshold,
 #endif
 #if KEYBALL_SCROLLSNAP_ENABLE == 2
                     .ssnap = keyball_get_scrollsnap_mode(),
@@ -734,6 +849,12 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
 #ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
             case AML_TO:
                 set_auto_mouse_enable(!get_auto_mouse_enable());
+                // Reset on toggle
+                keyball.aml_motion_distance_sq = 0;
+                keyball.aml_active = false;
+                if (!get_auto_mouse_enable()) {
+                    layer_off(AUTO_MOUSE_DEFAULT_LAYER);
+                }
                 break;
             case AML_I50:
                 {
@@ -746,6 +867,12 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
                     uint16_t v = get_auto_mouse_timeout() - 50;
                     set_auto_mouse_timeout(MAX(v, AML_TIMEOUT_MIN));
                 }
+                break;
+            case AML_I_TH:
+                add_auto_mouse_threshold(1);
+                break;
+            case AML_D_TH:
+                add_auto_mouse_threshold(-1);
                 break;
 #endif
 
