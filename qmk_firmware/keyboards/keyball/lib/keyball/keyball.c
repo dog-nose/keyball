@@ -37,7 +37,9 @@ const uint8_t AML_THRESHOLD_MIN = 5;  // Sensor value 50
 const uint8_t AML_THRESHOLD_MAX = 50; // Sensor value 500
 const uint8_t AML_THRESHOLD_DEFAULT =
     26; // Sensor value 260 (approx 50 pixels @ 500 CPI)
-const uint16_t AML_MOTION_TIMEOUT = 500; // Motion accumulation timeout (ms)
+const uint16_t AML_MOTION_TIMEOUT = 500;   // Motion accumulation timeout (ms)
+const uint16_t AML_TYPING_COOLDOWN = 200;  // Typing cooldown period (ms)
+const int8_t AML_DEADZONE = 3;             // Minimum motion to consider (ignore noise)
 
 static const char BL = '\xB0'; // Blank indicator character
 static const char LFSTR_ON[] PROGMEM = "\xB2\xB3";
@@ -288,6 +290,9 @@ static inline bool should_report(void) {
 
 #ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
 
+// Last keypress time for typing cooldown
+static uint32_t aml_last_keypress_time = 0;
+
 // Auto Mouse Layer: Motion accumulation and threshold check
 static void keyball_auto_mouse_layer_check(int16_t dx, int16_t dy) {
   if (!get_auto_mouse_enable()) {
@@ -295,6 +300,16 @@ static void keyball_auto_mouse_layer_check(int16_t dx, int16_t dy) {
   }
 
   uint32_t now = timer_read32();
+
+  // Typing cooldown: Ignore motion shortly after keypress
+  if (TIMER_DIFF_32(now, aml_last_keypress_time) < AML_TYPING_COOLDOWN) {
+    return;
+  }
+
+  // Deadzone: Ignore small motion (likely noise or vibration)
+  if (abs(dx) <= AML_DEADZONE && abs(dy) <= AML_DEADZONE) {
+    return;
+  }
 
   // Timeout check: Reset if last motion was too long ago
   if (keyball.aml_last_motion_time > 0 &&
@@ -767,9 +782,11 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
 
 #ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
   // Reset motion accumulation on key press (except auto mouse config keys)
+  // Also record keypress time for typing cooldown
   if (record->event.pressed && keycode != AML_TO && keycode != AML_I50 &&
       keycode != AML_D50 && keycode != AML_I_TH && keycode != AML_D_TH) {
     keyball.aml_motion_distance_sq = 0;
+    aml_last_keypress_time = timer_read32();
   }
 #endif
 
