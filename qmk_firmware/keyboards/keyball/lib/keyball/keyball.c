@@ -35,7 +35,7 @@ const uint16_t AML_TIMEOUT_QU  = 50;   // Quantization Unit
 
 const uint8_t AML_THRESHOLD_MIN = 5;   // Sensor value 50
 const uint8_t AML_THRESHOLD_MAX = 50;  // Sensor value 500
-const uint8_t AML_THRESHOLD_DEFAULT = 13;  // Sensor value 130 (approx 25 pixels @ 500 CPI)
+const uint8_t AML_THRESHOLD_DEFAULT = 26;  // Sensor value 260 (approx 50 pixels @ 500 CPI)
 const uint16_t AML_MOTION_TIMEOUT = 500;  // Motion accumulation timeout (ms)
 
 static const char BL = '\xB0'; // Blank indicator character
