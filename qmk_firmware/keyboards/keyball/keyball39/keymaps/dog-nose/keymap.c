@@ -66,6 +66,70 @@ layer_state_t layer_state_set_user(layer_state_t state) {
   return state;
 }
 
+// ============================================================================
+// カスタムトラックボール制御
+// - レイヤー0,2,3（キーボード専用）ではマウス移動を無効化
+// - 1秒連続でトラックボールを動かしたらレイヤー1（マウスレイヤー）に自動切り替え
+// ============================================================================
+
+// ヘルパー関数（keyball.cのstatic関数を再定義）
+static inline int8_t clip2int8(int16_t v) {
+    return (v) < -127 ? -127 : (v) > 127 ? 127 : (int8_t)v;
+}
+
+// タイマー変数
+static uint32_t trackball_motion_start = 0;
+static bool trackball_motion_active = false;
+
+#define MOUSE_LAYER 1
+#define MOUSE_LAYER_ACTIVATION_TIME 1000  // 1秒
+
+void keyball_on_apply_motion_to_mouse_move(keyball_motion_t *m, report_mouse_t *r, bool is_left) {
+    uint8_t current_layer = get_highest_layer(layer_state);
+
+    // モーションの有無をチェック（モーション値をクリアする前に）
+    bool has_motion = (m->x != 0 || m->y != 0);
+
+    if (current_layer == MOUSE_LAYER) {
+        // マウスレイヤーでは通常のマウス動作
+        r->x = clip2int8(m->y);
+        r->y = clip2int8(m->x);
+        if (is_left) {
+            r->x = -r->x;
+            r->y = -r->y;
+        }
+        // タイマーをリセット
+        trackball_motion_active = false;
+    } else {
+        // キーボード専用レイヤー（0, 2, 3）ではマウス移動を無効化
+        // r->x, r->y は設定しない
+
+        // タイマー処理：1秒連続で動かしたらマウスレイヤーに切り替え
+        if (has_motion) {
+            uint32_t now = timer_read32();
+            if (!trackball_motion_active) {
+                // モーション開始
+                trackball_motion_start = now;
+                trackball_motion_active = true;
+            } else {
+                // 連続モーション中
+                if (TIMER_DIFF_32(now, trackball_motion_start) >= MOUSE_LAYER_ACTIVATION_TIME) {
+                    // 1秒経過 → マウスレイヤーに切り替え
+                    layer_move(MOUSE_LAYER);
+                    trackball_motion_active = false;
+                }
+            }
+        } else {
+            // モーション停止 → タイマーリセット
+            trackball_motion_active = false;
+        }
+    }
+
+    // モーション値をクリア（必須）
+    m->x = 0;
+    m->y = 0;
+}
+
 #ifdef OLED_ENABLE
 
 #include "lib/oledkit/oledkit.h"
