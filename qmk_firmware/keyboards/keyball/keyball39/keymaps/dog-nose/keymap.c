@@ -69,7 +69,10 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 // ============================================================================
 // カスタムトラックボール制御
 // - レイヤー0,2,3（キーボード専用）ではマウス移動を無効化
-// - 1秒連続でトラックボールを動かしたらレイヤー1（マウスレイヤー）に自動切り替え
+// - トラックボールを左→右にジェスチャーしたらレイヤー1（マウスレイヤー）に自動切り替え
+//   - 左への移動：25以上（-25以下）
+//   - 右への移動：15以上（15以上）
+//   - 左から右への遷移時間：200ms以内
 // ============================================================================
 
 // ヘルパー関数（keyball.cのstatic関数を再定義）
@@ -77,12 +80,14 @@ static inline int8_t clip2int8(int16_t v) {
     return (v) < -127 ? -127 : (v) > 127 ? 127 : (int8_t)v;
 }
 
-// タイマー変数
-static uint32_t trackball_motion_start = 0;
-static bool trackball_motion_active = false;
+// ジェスチャー検出用の変数
+static bool left_motion_detected = false;
+static uint32_t left_motion_time = 0;
 
 #define MOUSE_LAYER 1
-#define MOUSE_LAYER_ACTIVATION_TIME 1000  // 1秒
+#define LEFT_MOTION_THRESHOLD -25   // 左への移動量（負の値で25以上）
+#define RIGHT_MOTION_THRESHOLD 15   // 右への移動量（正の値で15以上）
+#define MOTION_TIME_WINDOW 200      // 200ms以内
 
 void keyball_on_apply_motion_to_mouse_move(keyball_motion_t *m, report_mouse_t *r, bool is_left) {
     uint8_t current_layer = get_highest_layer(layer_state);
@@ -98,30 +103,41 @@ void keyball_on_apply_motion_to_mouse_move(keyball_motion_t *m, report_mouse_t *
             r->x = -r->x;
             r->y = -r->y;
         }
-        // タイマーをリセット
-        trackball_motion_active = false;
+        // ジェスチャー状態をリセット
+        left_motion_detected = false;
     } else {
         // キーボード専用レイヤー（0, 2, 3）ではマウス移動を無効化
         // r->x, r->y は設定しない
 
-        // タイマー処理：1秒連続で動かしたらマウスレイヤーに切り替え
+        // ジェスチャー検出：左→右の動きでマウスレイヤーに切り替え
         if (has_motion) {
             uint32_t now = timer_read32();
-            if (!trackball_motion_active) {
-                // モーション開始
-                trackball_motion_start = now;
-                trackball_motion_active = true;
-            } else {
-                // 連続モーション中
-                if (TIMER_DIFF_32(now, trackball_motion_start) >= MOUSE_LAYER_ACTIVATION_TIME) {
-                    // 1秒経過 → マウスレイヤーに切り替え
-                    layer_move(MOUSE_LAYER);
-                    trackball_motion_active = false;
-                }
+
+            // マウスカーソルのX方向の動き（m->yがマウスのX方向に対応）
+            int16_t mouse_x_motion = m->y;
+            if (is_left) {
+                mouse_x_motion = -mouse_x_motion;  // 左手用の場合は反転
             }
-        } else {
-            // モーション停止 → タイマーリセット
-            trackball_motion_active = false;
+
+            // 左への動きを検出（負の値で閾値以下）
+            if (mouse_x_motion <= LEFT_MOTION_THRESHOLD) {
+                left_motion_detected = true;
+                left_motion_time = now;
+            }
+            // 右への動きを検出（正の値で閾値以上）
+            else if (left_motion_detected && mouse_x_motion >= RIGHT_MOTION_THRESHOLD) {
+                // 左動作から200ms以内かチェック
+                if (TIMER_DIFF_32(now, left_motion_time) <= MOTION_TIME_WINDOW) {
+                    // マウスレイヤーに切り替え
+                    layer_move(MOUSE_LAYER);
+                }
+                // ジェスチャー完了、状態リセット
+                left_motion_detected = false;
+            }
+            // 時間切れチェック：左動作から200ms以上経過したらリセット
+            else if (left_motion_detected && TIMER_DIFF_32(now, left_motion_time) > MOTION_TIME_WINDOW) {
+                left_motion_detected = false;
+            }
         }
     }
 
