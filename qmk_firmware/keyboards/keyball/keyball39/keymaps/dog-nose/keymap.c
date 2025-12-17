@@ -20,6 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "quantum.h"
 
+// カスタムキーコード定義
+enum custom_keycodes {
+    EMAIL_ADDR_0 = QK_KB_0,  // User 0: y.hiro4823gta@gmail.com
+    EMAIL_ADDR_1 = QK_KB_1,  // User 1: dog.nose.rc@gmail.com
+};
+
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   // keymap for default (VIA)
@@ -64,6 +70,23 @@ layer_state_t layer_state_set_user(layer_state_t state) {
   // Auto enable scroll mode when the highest layer is 3
   // keyball_set_scroll_mode(get_highest_layer(state) == 3);
   return state;
+}
+
+// カスタムキーコード処理
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case EMAIL_ADDR_0:
+            if (record->event.pressed) {
+                SEND_STRING("y.hiro4823gta@gmail.com");
+            }
+            return false;
+        case EMAIL_ADDR_1:
+            if (record->event.pressed) {
+                SEND_STRING("dog.nose.rc@gmail.com");
+            }
+            return false;
+    }
+    return true;
 }
 
 // ============================================================================
