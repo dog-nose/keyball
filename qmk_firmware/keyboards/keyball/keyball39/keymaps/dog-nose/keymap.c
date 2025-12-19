@@ -20,6 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "quantum.h"
 
+// カスタムキーコード定義
+enum custom_keycodes {
+    EMAIL_ADDR_0 = QK_KB_0,  // User 0: y.hiro4823gta@gmail.com
+    EMAIL_ADDR_1 = QK_KB_1,  // User 1: dog.nose.rc@gmail.com
+};
+
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   // keymap for default (VIA)
@@ -64,6 +70,103 @@ layer_state_t layer_state_set_user(layer_state_t state) {
   // Auto enable scroll mode when the highest layer is 3
   // keyball_set_scroll_mode(get_highest_layer(state) == 3);
   return state;
+}
+
+// カスタムキーコード処理
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case EMAIL_ADDR_0:
+            if (record->event.pressed) {
+                SEND_STRING("y.hiro4823gta@gmail.com");
+            }
+            return false;
+        case EMAIL_ADDR_1:
+            if (record->event.pressed) {
+                SEND_STRING("dog.nose.rc@gmail.com");
+            }
+            return false;
+    }
+    return true;
+}
+
+// ============================================================================
+// カスタムトラックボール制御
+// - レイヤー0,2,3（キーボード専用）ではマウス移動を無効化
+// - トラックボールを左→右にジェスチャーしたらレイヤー1（マウスレイヤー）に自動切り替え
+//   - 左への移動：25以上（-25以下）
+//   - 右への移動：15以上（15以上）
+//   - 左から右への遷移時間：200ms以内
+// ============================================================================
+
+// ヘルパー関数（keyball.cのstatic関数を再定義）
+static inline int8_t clip2int8(int16_t v) {
+    return (v) < -127 ? -127 : (v) > 127 ? 127 : (int8_t)v;
+}
+
+// ジェスチャー検出用の変数
+static bool left_motion_detected = false;
+static uint32_t left_motion_time = 0;
+
+#define MOUSE_LAYER 1
+#define LEFT_MOTION_THRESHOLD -25   // 左への移動量（負の値で25以上）
+#define RIGHT_MOTION_THRESHOLD 15   // 右への移動量（正の値で15以上）
+#define MOTION_TIME_WINDOW 200      // 200ms以内
+
+void keyball_on_apply_motion_to_mouse_move(keyball_motion_t *m, report_mouse_t *r, bool is_left) {
+    uint8_t current_layer = get_highest_layer(layer_state);
+
+    // モーションの有無をチェック（モーション値をクリアする前に）
+    bool has_motion = (m->x != 0 || m->y != 0);
+
+    if (current_layer == MOUSE_LAYER) {
+        // マウスレイヤーでは通常のマウス動作
+        r->x = clip2int8(m->y);
+        r->y = clip2int8(m->x);
+        if (is_left) {
+            r->x = -r->x;
+            r->y = -r->y;
+        }
+        // ジェスチャー状態をリセット
+        left_motion_detected = false;
+    } else {
+        // キーボード専用レイヤー（0, 2, 3）ではマウス移動を無効化
+        // r->x, r->y は設定しない
+
+        // ジェスチャー検出：左→右の動きでマウスレイヤーに切り替え
+        if (has_motion) {
+            uint32_t now = timer_read32();
+
+            // マウスカーソルのX方向の動き（m->yがマウスのX方向に対応）
+            int16_t mouse_x_motion = m->y;
+            if (is_left) {
+                mouse_x_motion = -mouse_x_motion;  // 左手用の場合は反転
+            }
+
+            // 左への動きを検出（負の値で閾値以下）
+            if (mouse_x_motion <= LEFT_MOTION_THRESHOLD) {
+                left_motion_detected = true;
+                left_motion_time = now;
+            }
+            // 右への動きを検出（正の値で閾値以上）
+            else if (left_motion_detected && mouse_x_motion >= RIGHT_MOTION_THRESHOLD) {
+                // 左動作から200ms以内かチェック
+                if (TIMER_DIFF_32(now, left_motion_time) <= MOTION_TIME_WINDOW) {
+                    // マウスレイヤーに切り替え
+                    layer_move(MOUSE_LAYER);
+                }
+                // ジェスチャー完了、状態リセット
+                left_motion_detected = false;
+            }
+            // 時間切れチェック：左動作から200ms以上経過したらリセット
+            else if (left_motion_detected && TIMER_DIFF_32(now, left_motion_time) > MOTION_TIME_WINDOW) {
+                left_motion_detected = false;
+            }
+        }
+    }
+
+    // モーション値をクリア（必須）
+    m->x = 0;
+    m->y = 0;
 }
 
 #ifdef OLED_ENABLE

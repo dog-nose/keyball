@@ -49,17 +49,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define TAP_CODE_DELAY 5
 
- 
+
 // マウスキー機能の有効化
 // #define MOUSEKEY_ENABLE
 //#define IGNORE_MOD_TAP_KEY_SUSTAIN
 // マウスキーの加速機能 (オプション)
 //#define MOUSEKEY_ACCEL 1
 //#define AUTO_MOUSE_ENABLE
-#define POINTING_DEVICE_AUTO_MOUSE_ENABLE
-#define AUTO_MOUSE_DEFAULT_LAYER 1
 
-#define AUTO_MOUSE_DEFAULT_TIMEOUT 3000 // 例: 3000ms (3秒) のアイドルで移行開始
-
-// 自動移行後にマウスが動いたときに、元のレイヤーに戻るまでの猶予時間
-#define AUTO_MOUSE_DELAY 100 // 例: 100ms
+// カスタム実装を使用するため Auto Mouse を無効化
+// #define POINTING_DEVICE_AUTO_MOUSE_ENABLE
+// #define AUTO_MOUSE_DEFAULT_LAYER 1
+// #define AUTO_MOUSE_DEFAULT_TIMEOUT 3000
+// #define AUTO_MOUSE_DELAY 100
