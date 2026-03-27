@@ -58,10 +58,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   ),
 
   [4] = LAYOUT_universal(
-    KC_Q     , KC_W     , KC_E     , KC_R     , KC_T     ,                            KC_Y     , KC_U     , KC_I     , KC_O     , KC_P     ,
-    KC_A     , KC_S     , KC_D     , KC_F     , KC_G     ,                            KC_H     , KC_J     , KC_K     , KC_L     , KC_MINS  ,
-    KC_Z     , KC_X     , KC_C     , KC_V     , KC_B     ,                            KC_N     , KC_M     , KC_COMM  , KC_DOT   , KC_SLSH  ,
-    KC_LCTL  , KC_LGUI  , KC_LALT  ,LSFT_T(KC_LNG2),LT(1,KC_SPC),LT(3,KC_LNG1),KC_BSPC,LT(2,KC_ENT),LSFT_T(KC_LNG2),KC_RALT,KC_RGUI, KC_RSFT
+    KC_F1    , KC_F2    , KC_F3    , KC_F4    , KC_RBRC  ,                            KC_F6    , KC_F7    , KC_F8    , KC_F9    , KC_F10   ,
+    KC_F5    , KC_EXLM  , S(KC_6)  ,S(KC_INT3), S(KC_8)  ,                           S(KC_INT1), KC_BTN1  , KC_PGUP  , KC_BTN2  , KC_SCLN  ,
+    S(KC_EQL),S(KC_LBRC),S(KC_7)   , S(KC_2)  ,S(KC_RBRC),                            KC_LBRC  , KC_DLR   , KC_PGDN  , KC_BTN3  , KC_F11   ,
+    KC_INT1  , KC_EQL   , S(KC_3)  , _______  , _______  , _______  ,      TO(2)    , TO(0)    , _______  , KC_RALT  , KC_RGUI  , KC_F12
   ),
 };
 // clang-format on
@@ -92,7 +92,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 // ============================================================================
 // カスタムトラックボール制御
 // - レイヤー0,2,3（キーボード専用）ではマウス移動を無効化
-// - トラックボールを左→右にジェスチャーしたらレイヤー1（マウスレイヤー）に自動切り替え
+// - トラックボールを左→右にジェスチャーしたらレイヤー4（マウスレイヤー）に自動切り替え
 //   - 左への移動：25以上（-25以下）
 //   - 右への移動：15以上（15以上）
 //   - 左から右への遷移時間：200ms以内
@@ -107,7 +107,7 @@ static inline int8_t clip2int8(int16_t v) {
 static bool left_motion_detected = false;
 static uint32_t left_motion_time = 0;
 
-#define MOUSE_LAYER 1
+#define MOUSE_LAYER 4
 #define LEFT_MOTION_THRESHOLD -25   // 左への移動量（負の値で25以上）
 #define RIGHT_MOTION_THRESHOLD 15   // 右への移動量（正の値で15以上）
 #define MOTION_TIME_WINDOW 200      // 200ms以内
