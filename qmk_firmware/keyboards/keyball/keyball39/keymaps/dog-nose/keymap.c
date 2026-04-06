@@ -26,6 +26,11 @@ enum custom_keycodes {
     EMAIL_ADDR_1 = QK_KB_1,  // User 1: dog.nose.rc@gmail.com
 };
 
+#define MOUSE_LAYER 4
+#define LEFT_MOTION_THRESHOLD -25   // 左への移動量（負の値で25以上）
+#define RIGHT_MOTION_THRESHOLD 15   // 右への移動量（正の値で15以上）
+#define MOTION_TIME_WINDOW 200      // 200ms以内
+
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   // keymap for default (VIA)
@@ -128,11 +133,6 @@ static inline int8_t clip2int8(int16_t v) {
 // ジェスチャー検出用の変数
 static bool left_motion_detected = false;
 static uint32_t left_motion_time = 0;
-
-#define MOUSE_LAYER 4
-#define LEFT_MOTION_THRESHOLD -25   // 左への移動量（負の値で25以上）
-#define RIGHT_MOTION_THRESHOLD 15   // 右への移動量（正の値で15以上）
-#define MOTION_TIME_WINDOW 200      // 200ms以内
 
 void keyball_on_apply_motion_to_mouse_move(keyball_motion_t *m, report_mouse_t *r, bool is_left) {
     uint8_t current_layer = get_highest_layer(layer_state);
