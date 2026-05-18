@@ -26,6 +26,11 @@ enum custom_keycodes {
     EMAIL_ADDR_1 = QK_KB_1,  // User 1: dog.nose.rc@gmail.com
 };
 
+#define MOUSE_LAYER 4
+#define LEFT_MOTION_THRESHOLD -25   // 左への移動量（負の値で25以上）
+#define RIGHT_MOTION_THRESHOLD 15   // 右への移動量（正の値で15以上）
+#define MOTION_TIME_WINDOW 200      // 200ms以内
+
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   // keymap for default (VIA)
@@ -58,10 +63,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   ),
 
   [4] = LAYOUT_universal(
-    KC_Q     , KC_W     , KC_E     , KC_R     , KC_T     ,                            KC_Y     , KC_U     , KC_I     , KC_O     , KC_P     ,
-    KC_A     , KC_S     , KC_D     , KC_F     , KC_G     ,                            KC_H     , KC_J     , KC_K     , KC_L     , KC_MINS  ,
-    KC_Z     , KC_X     , KC_C     , KC_V     , KC_B     ,                            KC_N     , KC_M     , KC_COMM  , KC_DOT   , KC_SLSH  ,
-    KC_LCTL  , KC_LGUI  , KC_LALT  ,LSFT_T(KC_LNG2),LT(1,KC_SPC),LT(3,KC_LNG1),KC_BSPC,LT(2,KC_ENT),LSFT_T(KC_LNG2),KC_RALT,KC_RGUI, KC_RSFT
+    KC_F1    , KC_F2    , KC_F3    , KC_F4    , KC_RBRC  ,                            KC_F6    , KC_F7    , KC_F8    , KC_F9    , KC_F10   ,
+    KC_F5    , KC_EXLM  , S(KC_6)  ,S(KC_INT3), S(KC_8)  ,                           S(KC_INT1), KC_BTN1  , KC_PGUP  , KC_BTN2  , KC_SCLN  ,
+    S(KC_EQL),S(KC_LBRC),S(KC_7)   , S(KC_2)  ,S(KC_RBRC),                            KC_LBRC  , KC_DLR   , KC_PGDN  , KC_BTN3  , KC_F11   ,
+    KC_INT1  , KC_EQL   , S(KC_3)  , _______  , _______  , _______  ,      TO(2)    , TO(0)    , _______  , KC_RALT  , KC_RGUI  , KC_F12
   ),
 };
 // clang-format on
@@ -74,6 +79,28 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 
 // カスタムキーコード処理
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    // マウスレイヤー中のキー押下でレイヤー0に自動復帰
+    if (record->event.pressed && get_highest_layer(layer_state) == MOUSE_LAYER) {
+        bool is_modifier = (keycode >= KC_LCTL && keycode <= KC_RGUI);
+        // マウス系キー: ボタン・ホイール・Launchpad・Mission Control はレイヤー維持
+        bool is_mouse_key = IS_MOUSEKEY(keycode) || keycode == KC_MCTL || keycode == KC_LPAD;
+
+        if (!is_modifier && !is_mouse_key) {
+            // Ctrl/Alt/Gui が押されている場合はレイヤーを維持（コマンド系ショートカット）
+            // Shift のみの場合はレイヤー0に戻りシフト入力を通す（例: Shift+A → "A"）
+            uint8_t mods = get_mods() | get_oneshot_mods();
+            bool modifier_active = mods & (MOD_MASK_CTRL | MOD_MASK_ALT | MOD_MASK_GUI);
+
+            if (!modifier_active) {
+                // レイヤー0のキーコードを取得し、レイヤー0に戻ってそのキーを入力
+                uint16_t layer0_keycode = keymap_key_to_keycode(0, record->event.key);
+                layer_move(0);
+                tap_code16(layer0_keycode);
+                return false;
+            }
+        }
+    }
+
     switch (keycode) {
         case EMAIL_ADDR_0:
             if (record->event.pressed) {
@@ -92,7 +119,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 // ============================================================================
 // カスタムトラックボール制御
 // - レイヤー0,2,3（キーボード専用）ではマウス移動を無効化
-// - トラックボールを左→右にジェスチャーしたらレイヤー1（マウスレイヤー）に自動切り替え
+// - トラックボールを左→右にジェスチャーしたらレイヤー4（マウスレイヤー）に自動切り替え
 //   - 左への移動：25以上（-25以下）
 //   - 右への移動：15以上（15以上）
 //   - 左から右への遷移時間：200ms以内
@@ -106,11 +133,6 @@ static inline int8_t clip2int8(int16_t v) {
 // ジェスチャー検出用の変数
 static bool left_motion_detected = false;
 static uint32_t left_motion_time = 0;
-
-#define MOUSE_LAYER 1
-#define LEFT_MOTION_THRESHOLD -25   // 左への移動量（負の値で25以上）
-#define RIGHT_MOTION_THRESHOLD 15   // 右への移動量（正の値で15以上）
-#define MOTION_TIME_WINDOW 200      // 200ms以内
 
 void keyball_on_apply_motion_to_mouse_move(keyball_motion_t *m, report_mouse_t *r, bool is_left) {
     uint8_t current_layer = get_highest_layer(layer_state);

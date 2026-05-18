@@ -43,9 +43,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #endif
 #define DYNAMIC_KEYMAP_LAYER_COUNT 5
 
-#ifdef HOLD_ON_OTHER_KEY_PRESS
-#undef HOLD_ON_OTHER_KEY_PRESS
-#endif
+// #ifdef HOLD_ON_OTHER_KEY_PRESS
+// #undef HOLD_ON_OTHER_KEY_PRESS
+// #endif
 
 #define TAP_CODE_DELAY 5
 
