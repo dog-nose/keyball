@@ -166,8 +166,8 @@ void keyball_on_apply_motion_to_mouse_move(keyball_motion_t *m, report_mouse_t *
                         // Horizontal: move between Spaces.
                         tap_code16(gesture_x > 0 ? LCTL(KC_RGHT) : LCTL(KC_LEFT));
                     } else {
-                        // Vertical: down -> Mission Control, up -> Launchpad.
-                        tap_code16(gesture_y > 0 ? KC_MCTL : KC_LPAD);
+                        // Vertical: down -> Launchpad, up -> Mission Control.
+                        tap_code16(gesture_y > 0 ? KC_LPAD : KC_MCTL);
                     }
                     gesture_x         = 0;
                     gesture_y         = 0;
