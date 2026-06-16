@@ -93,23 +93,6 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    if (record->event.pressed && get_highest_layer(layer_state) == MOUSE_LAYER) {
-        bool is_modifier = (keycode >= KC_LCTL && keycode <= KC_RGUI);
-        bool is_mouse_key = IS_MOUSEKEY(keycode) || keycode == KC_MCTL || keycode == KC_LPAD;
-
-        if (!is_modifier && !is_mouse_key) {
-            uint8_t mods = get_mods() | get_oneshot_mods();
-            bool modifier_active = mods & (MOD_MASK_CTRL | MOD_MASK_ALT | MOD_MASK_GUI);
-
-            if (!modifier_active) {
-                uint16_t layer0_keycode = keymap_key_to_keycode(0, record->event.key);
-                layer_move(0);
-                tap_code16(layer0_keycode);
-                return false;
-            }
-        }
-    }
-
     switch (keycode) {
         case EMAIL_ADDR_0:
             if (record->event.pressed) {
