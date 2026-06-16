@@ -30,13 +30,13 @@ enum custom_keycodes {
 #define RIGHT_MOTION_THRESHOLD  15
 #define MOTION_TIME_WINDOW     200
 
-// Layer 3 trackball gestures (macOS).
+// Layer 2 trackball gestures (macOS).
 //   swipe left / right -> move one Space left / right (Ctrl+Left / Ctrl+Right)
-//   swipe down         -> Mission Control
-//   swipe up           -> Launchpad
+//   swipe down         -> Launchpad
+//   swipe up           -> Mission Control
 // Requires "Move left/right a space" shortcuts enabled in
 // System Settings > Keyboard > Keyboard Shortcuts > Mission Control.
-#define GESTURE_LAYER        3
+#define GESTURE_LAYER        2
 #define GESTURE_THRESHOLD    50   // accumulated motion counts needed to fire
 #define GESTURE_IDLE_MS      120  // a pause longer than this starts a fresh gesture
 #define GESTURE_COOLDOWN_MS  400  // minimum time between two gesture fires
