@@ -25,18 +25,22 @@ enum custom_keycodes {
     EMAIL_ADDR_1,
 };
 
-#define MOUSE_LAYER 4
+#define MOUSE_LAYER 3
 #define LEFT_MOTION_THRESHOLD  -25
 #define RIGHT_MOTION_THRESHOLD  15
 #define MOTION_TIME_WINDOW     200
 
-// Layer 2 trackball gestures (macOS).
+// Layer 4 trackball gestures (macOS).
 //   swipe left / right -> move one Space left / right (Ctrl+Left / Ctrl+Right)
 //   swipe down         -> Launchpad
 //   swipe up           -> Mission Control
 // Requires "Move left/right a space" shortcuts enabled in
 // System Settings > Keyboard > Keyboard Shortcuts > Mission Control.
-#define GESTURE_LAYER        2
+#define GESTURE_LAYER        4
+// Layer 5 trackball gestures (browser / page navigation).
+//   swipe left  -> back    (Mouse Button 4)
+//   swipe right -> forward (Mouse Button 5)
+#define GESTURE_LAYER_PAGE   5
 #define GESTURE_THRESHOLD    50   // accumulated motion counts needed to fire
 #define GESTURE_IDLE_MS      120  // a pause longer than this starts a fresh gesture
 #define GESTURE_COOLDOWN_MS  400  // minimum time between two gesture fires
@@ -48,7 +52,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     KC_Q              , KC_W                          , KC_E    , KC_R             , KC_T         ,                             KC_Y            , KC_U    , KC_I    , KC_O    , KC_P             ,
     LCTL_T(KC_A)      , KC_S                          , KC_D    , KC_F             , KC_G         ,                             KC_H            , KC_J    , KC_K    , KC_L    , RCTL_T(KC_ENT)   ,
     LSFT_T(KC_Z)      , KC_X                          , KC_C    , KC_V             , KC_B         ,                             KC_N            , KC_M    , KC_COMM , KC_DOT  , RSFT_T(KC_SLSH)  ,
-    LCTL_T(KC_TAB)    , MT(MOD_LGUI|MOD_LALT,KC_BSLS) , KC_LNG1 , LGUI_T(KC_LNG2) , LT(1,KC_SPC) , MO(2)  , LGUI_T(KC_BSPC) , LT(3,KC_SPC)  , KC_NO   , KC_NO   , KC_NO   , LT(4,KC_LNG1)
+    LCTL_T(KC_TAB)    , MT(MOD_LGUI|MOD_LALT,KC_BSLS) , KC_LNG1 , LGUI_T(KC_LNG2) , LT(1,KC_SPC) , MO(2)  , LGUI_T(KC_BSPC) , LT(4,KC_SPC)  , KC_NO   , KC_NO   , KC_NO   , KC_LNG1
   ),
 
   // Layer 1: Symbol / Navigation
@@ -67,27 +71,36 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     _______           , _______  , _______  , _______  , _______  , _______  , _______          , _______   , _______  , _______  , _______  , _______
   ),
 
-  // Layer 3: Numpad / Screenshot
+  // Layer 3: Mouse (auto-switch target). Enter pos -> MO(4) gesture, P pos -> MO(5) gesture.
   [3] = LAYOUT_universal(
+    _______           , _______  , _______  , _______  , _______  ,                             _______     , KC_LPAD        , KC_MS_WH_DOWN  , _______        , MO(5)    ,
+    _______           , _______  , _______  , _______  , _______  ,                             KC_MS_BTN4  , KC_MS_BTN1     , KC_MCTL        , KC_MS_BTN2     , MO(4)    ,
+    _______           , _______  , _______  , _______  , _______  ,                             KC_MS_BTN5  , KC_MS_WH_LEFT  , KC_MS_WH_UP    , KC_MS_WH_RIGHT , _______  ,
+    _______           , _______  , _______  , _______  , _______  , TG(3)    , TG(3)            , _______   , _______  , _______          , _______        , _______
+  ),
+
+  // Layer 4: Gesture A (macOS Spaces / Mission Control / Launchpad) + Numpad / Screenshot
+  [4] = LAYOUT_universal(
     KC_P1             , KC_P2   , KC_P3    , KC_P4    , KC_P5    ,                             KC_P6       , KC_P7    , KC_P8                  , KC_P9                   , KC_P0    ,
     _______           , _______  , _______  , _______  , _______  ,                             _______     , _______  , _______                 , _______                 , _______  ,
     _______           , _______  , _______  , _______  , _______  ,                             _______     , _______  , LSFT(LGUI(KC_4))        , LCTL(LSFT(LGUI(KC_4))) , _______  ,
     _______           , _______  , _______  , _______  , _______  , _______  , _______          , _______   , _______  , _______                 , _______                 , _______
   ),
 
-  // Layer 4: Mouse
-  [4] = LAYOUT_universal(
-    _______           , _______  , _______  , _______  , _______  ,                             _______     , KC_LPAD        , KC_MS_WH_DOWN  , _______        , _______  ,
-    _______           , _______  , _______  , _______  , _______  ,                             KC_MS_BTN4  , KC_MS_BTN1     , KC_MCTL        , KC_MS_BTN2     , _______  ,
-    _______           , _______  , _______  , _______  , _______  ,                             KC_MS_BTN5  , KC_MS_WH_LEFT  , KC_MS_WH_UP    , KC_MS_WH_RIGHT , _______  ,
-    _______           , _______  , _______  , _______  , _______  , TG(4)    , TG(4)            , _______   , _______  , _______          , _______        , _______
+  // Layer 5: Gesture B (browser page navigation: left -> Btn4 back, right -> Btn5 forward)
+  [5] = LAYOUT_universal(
+    _______           , _______  , _______  , _______  , _______  ,                             _______     , _______  , _______  , _______  , _______  ,
+    _______           , _______  , _______  , _______  , _______  ,                             _______     , _______  , _______  , _______  , _______  ,
+    _______           , _______  , _______  , _______  , _______  ,                             _______     , _______  , _______  , _______  , _______  ,
+    _______           , _______  , _______  , _______  , _______  , _______  , _______          , _______   , _______  , _______  , _______  , _______
   ),
 };
 // clang-format on
 
 layer_state_t layer_state_set_user(layer_state_t state) {
-    // Layer 3 now drives macOS gestures from trackball motion (handled in
-    // keyball_on_apply_motion_to_mouse_move), so scroll mode stays off.
+    // Trackball gestures are driven from motion in
+    // keyball_on_apply_motion_to_mouse_move (layers 4 and 5), so scroll
+    // mode stays off.
     keyball_set_scroll_mode(false);
     return state;
 }
@@ -115,7 +128,7 @@ static inline int8_t clip2int8(int16_t v) {
 static bool left_motion_detected = false;
 static uint32_t left_motion_time = 0;
 
-// Layer 3 gesture accumulators (see GESTURE_* defines above).
+// Layer 4/5 gesture accumulators (see GESTURE_* defines above).
 static int16_t  gesture_x           = 0;
 static int16_t  gesture_y           = 0;
 static uint32_t gesture_last_motion = 0;
@@ -169,6 +182,38 @@ void keyball_on_apply_motion_to_mouse_move(keyball_motion_t *m, report_mouse_t *
                         // Vertical: down -> Launchpad, up -> Mission Control.
                         tap_code16(gesture_y > 0 ? KC_LPAD : KC_MCTL);
                     }
+                    gesture_x         = 0;
+                    gesture_y         = 0;
+                    gesture_last_fire = now;
+                }
+            }
+        }
+    } else if (current_layer == GESTURE_LAYER_PAGE) {
+        if (has_motion) {
+            uint32_t now = timer_read32();
+
+            // A pause longer than the idle window starts a fresh gesture.
+            if (TIMER_DIFF_32(now, gesture_last_motion) > GESTURE_IDLE_MS) {
+                gesture_x = 0;
+                gesture_y = 0;
+            }
+            gesture_last_motion = now;
+
+            if (TIMER_DIFF_32(now, gesture_last_fire) <= GESTURE_COOLDOWN_MS) {
+                // Still cooling down: swallow motion so one swipe fires once.
+                gesture_x = 0;
+                gesture_y = 0;
+            } else {
+                int16_t dx = m->y;  // + = ball moved right
+                if (is_left) {
+                    dx = -dx;
+                }
+                gesture_x += dx;
+
+                int16_t ax = gesture_x < 0 ? -gesture_x : gesture_x;
+                if (ax >= GESTURE_THRESHOLD) {
+                    // Horizontal only: right -> forward (Btn5), left -> back (Btn4).
+                    tap_code16(gesture_x > 0 ? KC_MS_BTN5 : KC_MS_BTN4);
                     gesture_x         = 0;
                     gesture_y         = 0;
                     gesture_last_fire = now;
