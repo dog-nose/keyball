@@ -46,9 +46,14 @@ enum custom_keycodes {
 #define GESTURE_THRESHOLD    50   // accumulated motion counts needed to fire
 #define GESTURE_IDLE_MS      120  // a pause longer than this starts a fresh gesture
 #define GESTURE_COOLDOWN_MS  400  // minimum time between two gesture fires
-// Page scroll (layer 5 vertical) fires lighter and faster for a near-continuous feel.
-#define GESTURE_SCROLL_THRESHOLD   10
-#define GESTURE_SCROLL_COOLDOWN_MS 100
+// Page scroll (layer 5 vertical): each notch needs a bit of travel, and the
+// cooldown shrinks while you keep swiping the same direction so a sustained
+// swipe accelerates.
+#define GESTURE_SCROLL_THRESHOLD      15   // motion counts per scroll notch
+#define GESTURE_SCROLL_COOLDOWN_BASE  100  // ms between the first notches of a swipe
+#define GESTURE_SCROLL_COOLDOWN_MIN   25   // ms floor once fully accelerated
+#define GESTURE_SCROLL_ACCEL_STEP     15   // ms shaved off cooldown per same-dir fire
+#define GESTURE_SCROLL_STREAK_TIMEOUT 300  // ms; a longer pause resets the acceleration
 
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -139,6 +144,11 @@ static int16_t  gesture_y           = 0;
 static uint32_t gesture_last_motion = 0;
 static uint32_t gesture_last_fire   = 0;
 
+// Layer 5 vertical scroll acceleration: how many consecutive same-direction
+// scroll notches have fired without a direction change or long pause.
+static int8_t   scroll_dir          = 0;  // last fired direction: +1 down / -1 up
+static uint8_t  scroll_streak       = 0;
+
 void keyball_on_apply_motion_to_mouse_move(keyball_motion_t *m, report_mouse_t *r, bool is_left) {
     uint8_t current_layer = get_highest_layer(layer_state);
     bool has_motion = (m->x != 0 || m->y != 0);
@@ -228,12 +238,28 @@ void keyball_on_apply_motion_to_mouse_move(keyball_motion_t *m, report_mouse_t *
                     gesture_last_fire = now;
                 }
             } else {
-                // Vertical: page scroll. Light threshold + short cooldown so a
-                // sustained swipe scrolls almost continuously.
+                // Vertical: page scroll. The cooldown shrinks by ACCEL_STEP per
+                // consecutive same-direction notch (down to MIN), so holding a
+                // swipe in one direction accelerates the scroll.
+                int8_t dir = gesture_y > 0 ? 1 : -1;
+                if (dir != scroll_dir ||
+                    TIMER_DIFF_32(now, gesture_last_fire) > GESTURE_SCROLL_STREAK_TIMEOUT) {
+                    // New direction or a long pause: start slow again.
+                    scroll_streak = 0;
+                }
+                uint16_t reduction     = (uint16_t)scroll_streak * GESTURE_SCROLL_ACCEL_STEP;
+                uint16_t max_reduction = GESTURE_SCROLL_COOLDOWN_BASE - GESTURE_SCROLL_COOLDOWN_MIN;
+                uint16_t cooldown      = GESTURE_SCROLL_COOLDOWN_BASE -
+                                         (reduction > max_reduction ? max_reduction : reduction);
+
                 if (ay >= GESTURE_SCROLL_THRESHOLD &&
-                    TIMER_DIFF_32(now, gesture_last_fire) > GESTURE_SCROLL_COOLDOWN_MS) {
+                    TIMER_DIFF_32(now, gesture_last_fire) > cooldown) {
                     // down -> scroll down, up -> scroll up.
                     tap_code16(gesture_y > 0 ? KC_MS_WH_DOWN : KC_MS_WH_UP);
+                    if (scroll_streak < 255) {
+                        scroll_streak++;
+                    }
+                    scroll_dir        = dir;
                     gesture_x         = 0;
                     gesture_y         = 0;
                     gesture_last_fire = now;
