@@ -38,8 +38,10 @@ enum custom_keycodes {
 // System Settings > Keyboard > Keyboard Shortcuts > Mission Control.
 #define GESTURE_LAYER        4
 // Layer 5 trackball gestures (browser / page navigation).
-//   swipe left  -> back    (Mouse Button 4)
-//   swipe right -> forward (Mouse Button 5)
+//   swipe left  -> back        (Mouse Button 4)
+//   swipe right -> forward      (Mouse Button 5)
+//   swipe up    -> scroll up    (Mouse Wheel Up)
+//   swipe down  -> scroll down  (Mouse Wheel Down)
 #define GESTURE_LAYER_PAGE   5
 #define GESTURE_THRESHOLD    50   // accumulated motion counts needed to fire
 #define GESTURE_IDLE_MS      120  // a pause longer than this starts a fresh gesture
@@ -87,7 +89,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     _______           , _______  , _______  , _______  , _______  , _______  , _______          , _______   , _______  , _______                 , _______                 , _______
   ),
 
-  // Layer 5: Gesture B (browser page navigation: left -> Btn4 back, right -> Btn5 forward)
+  // Layer 5: Gesture B (browser page navigation: left -> Btn4 back, right -> Btn5 forward, up/down -> page scroll)
   [5] = LAYOUT_universal(
     _______           , _______  , _______  , _______  , _______  ,                             _______     , _______  , _______  , _______  , _______  ,
     _______           , _______  , _______  , _______  , _______  ,                             _______     , _______  , _______  , _______  , _______  ,
@@ -205,15 +207,25 @@ void keyball_on_apply_motion_to_mouse_move(keyball_motion_t *m, report_mouse_t *
                 gesture_y = 0;
             } else {
                 int16_t dx = m->y;  // + = ball moved right
+                int16_t dy = m->x;  // + = ball moved down
                 if (is_left) {
                     dx = -dx;
+                    dy = -dy;
                 }
                 gesture_x += dx;
+                gesture_y += dy;
 
                 int16_t ax = gesture_x < 0 ? -gesture_x : gesture_x;
-                if (ax >= GESTURE_THRESHOLD) {
-                    // Horizontal only: right -> forward (Btn5), left -> back (Btn4).
-                    tap_code16(gesture_x > 0 ? KC_MS_BTN5 : KC_MS_BTN4);
+                int16_t ay = gesture_y < 0 ? -gesture_y : gesture_y;
+
+                if (ax >= GESTURE_THRESHOLD || ay >= GESTURE_THRESHOLD) {
+                    if (ax >= ay) {
+                        // Horizontal: right -> forward (Btn5), left -> back (Btn4).
+                        tap_code16(gesture_x > 0 ? KC_MS_BTN5 : KC_MS_BTN4);
+                    } else {
+                        // Vertical: down -> scroll down, up -> scroll up.
+                        tap_code16(gesture_y > 0 ? KC_MS_WH_DOWN : KC_MS_WH_UP);
+                    }
                     gesture_x         = 0;
                     gesture_y         = 0;
                     gesture_last_fire = now;
