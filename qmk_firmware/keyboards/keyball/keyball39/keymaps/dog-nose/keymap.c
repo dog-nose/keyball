@@ -50,8 +50,8 @@ enum custom_keycodes {
 // cooldown shrinks while you keep swiping the same direction so a sustained
 // swipe accelerates.
 #define GESTURE_SCROLL_THRESHOLD      15   // motion counts per scroll notch
-#define GESTURE_SCROLL_COOLDOWN_BASE  100  // ms between the first notches of a swipe
-#define GESTURE_SCROLL_COOLDOWN_MIN   25   // ms floor once fully accelerated
+#define GESTURE_SCROLL_COOLDOWN_BASE  70   // ms between the first notches of a swipe
+#define GESTURE_SCROLL_COOLDOWN_MIN   5    // ms floor once fully accelerated
 #define GESTURE_SCROLL_ACCEL_STEP     15   // ms shaved off cooldown per same-dir fire
 #define GESTURE_SCROLL_STREAK_TIMEOUT 300  // ms; a longer pause resets the acceleration
 
