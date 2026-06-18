@@ -46,6 +46,9 @@ enum custom_keycodes {
 #define GESTURE_THRESHOLD    50   // accumulated motion counts needed to fire
 #define GESTURE_IDLE_MS      120  // a pause longer than this starts a fresh gesture
 #define GESTURE_COOLDOWN_MS  400  // minimum time between two gesture fires
+// Page scroll (layer 5 vertical) fires lighter and faster for a near-continuous feel.
+#define GESTURE_SCROLL_THRESHOLD   10
+#define GESTURE_SCROLL_COOLDOWN_MS 100
 
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -201,31 +204,36 @@ void keyball_on_apply_motion_to_mouse_move(keyball_motion_t *m, report_mouse_t *
             }
             gesture_last_motion = now;
 
-            if (TIMER_DIFF_32(now, gesture_last_fire) <= GESTURE_COOLDOWN_MS) {
-                // Still cooling down: swallow motion so one swipe fires once.
-                gesture_x = 0;
-                gesture_y = 0;
-            } else {
-                int16_t dx = m->y;  // + = ball moved right
-                int16_t dy = m->x;  // + = ball moved down
-                if (is_left) {
-                    dx = -dx;
-                    dy = -dy;
+            int16_t dx = m->y;  // + = ball moved right
+            int16_t dy = m->x;  // + = ball moved down
+            if (is_left) {
+                dx = -dx;
+                dy = -dy;
+            }
+            gesture_x += dx;
+            gesture_y += dy;
+
+            int16_t ax = gesture_x < 0 ? -gesture_x : gesture_x;
+            int16_t ay = gesture_y < 0 ? -gesture_y : gesture_y;
+
+            if (ax >= ay) {
+                // Horizontal: back / forward. Heavier threshold + cooldown,
+                // matching the layer 4 gestures.
+                if (ax >= GESTURE_THRESHOLD &&
+                    TIMER_DIFF_32(now, gesture_last_fire) > GESTURE_COOLDOWN_MS) {
+                    // right -> forward (Btn5), left -> back (Btn4).
+                    tap_code16(gesture_x > 0 ? KC_MS_BTN5 : KC_MS_BTN4);
+                    gesture_x         = 0;
+                    gesture_y         = 0;
+                    gesture_last_fire = now;
                 }
-                gesture_x += dx;
-                gesture_y += dy;
-
-                int16_t ax = gesture_x < 0 ? -gesture_x : gesture_x;
-                int16_t ay = gesture_y < 0 ? -gesture_y : gesture_y;
-
-                if (ax >= GESTURE_THRESHOLD || ay >= GESTURE_THRESHOLD) {
-                    if (ax >= ay) {
-                        // Horizontal: right -> forward (Btn5), left -> back (Btn4).
-                        tap_code16(gesture_x > 0 ? KC_MS_BTN5 : KC_MS_BTN4);
-                    } else {
-                        // Vertical: down -> scroll down, up -> scroll up.
-                        tap_code16(gesture_y > 0 ? KC_MS_WH_DOWN : KC_MS_WH_UP);
-                    }
+            } else {
+                // Vertical: page scroll. Light threshold + short cooldown so a
+                // sustained swipe scrolls almost continuously.
+                if (ay >= GESTURE_SCROLL_THRESHOLD &&
+                    TIMER_DIFF_32(now, gesture_last_fire) > GESTURE_SCROLL_COOLDOWN_MS) {
+                    // down -> scroll down, up -> scroll up.
+                    tap_code16(gesture_y > 0 ? KC_MS_WH_DOWN : KC_MS_WH_UP);
                     gesture_x         = 0;
                     gesture_y         = 0;
                     gesture_last_fire = now;
