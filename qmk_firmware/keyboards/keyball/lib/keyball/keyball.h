@@ -114,6 +114,8 @@ enum keyball_keycodes {
     AML_TO   = QK_KB_10, // Toggle automatic mouse layer
     AML_I50  = QK_KB_11, // Increment automatic mouse layer timeout
     AML_D50  = QK_KB_12, // Decrement automatic mouse layer timeout
+    AML_I_TH = QK_KB_16, // Increment automatic mouse layer threshold
+    AML_D_TH = QK_KB_17, // Decrement automatic mouse layer threshold
 
     // User customizable 32 keycodes.
     KEYBALL_SAFE_RANGE = QK_USER_0,
@@ -127,6 +129,7 @@ typedef union {
 #ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
         uint8_t amle : 1;  // automatic mouse layer enabled
         uint16_t amlto : 5; // automatic mouse layer timeout
+        uint8_t amlth : 8; // automatic mouse layer threshold
 #endif
 #if KEYBALL_SCROLLSNAP_ENABLE == 2
         uint8_t ssnap : 2; // scroll snap mode
@@ -176,6 +179,14 @@ typedef struct {
     uint16_t       last_kc;
     keypos_t       last_pos;
     report_mouse_t last_mouse;
+
+#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+    // Auto mouse layer management
+    uint32_t aml_motion_distance_sq;  // Accumulated motion distance squared
+    uint32_t aml_last_motion_time;    // Last motion detection time
+    uint8_t  aml_threshold;           // Current threshold setting
+    bool     aml_active;              // Auto mouse layer active state
+#endif
 
     // Buffer to indicate pressing keys.
     char pressing_keys[KEYBALL_OLED_MAX_PRESSING_KEYCODES + 1];
