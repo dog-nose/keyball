@@ -131,13 +131,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     return true;
 }
 
-void matrix_scan_user(void) {
-    if (gesture_pending_keycode != 0) {
-        tap_code16(gesture_pending_keycode);
-        gesture_pending_keycode = 0;
-    }
-}
-
 static inline int8_t clip2int8(int16_t v) {
     return (v) < -127 ? -127 : (v) > 127 ? 127 : (int8_t)v;
 }
@@ -159,6 +152,13 @@ static uint8_t  scroll_streak       = 0;
 // Deferred gesture keycode: set inside the pointing device callback and
 // flushed in matrix_scan_user so that tap_code16 never blocks the callback.
 static uint16_t gesture_pending_keycode = 0;
+
+void matrix_scan_user(void) {
+    if (gesture_pending_keycode != 0) {
+        tap_code16(gesture_pending_keycode);
+        gesture_pending_keycode = 0;
+    }
+}
 
 void keyball_on_apply_motion_to_mouse_move(keyball_motion_t *m, report_mouse_t *r, bool is_left) {
     uint8_t current_layer = get_highest_layer(layer_state);
